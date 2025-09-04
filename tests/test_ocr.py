@@ -2,9 +2,7 @@ from PIL import Image
 import pytesseract
 import os
 
-# --- IMPORTANT ---
-# If Tesseract is not in your system's PATH, you'll need to specify its location.
-# For Windows: pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 def run_ocr_test(image_path):
     """
@@ -30,5 +28,5 @@ def run_ocr_test(image_path):
         print(f"An error occurred during OCR test: {e}")
 
 if __name__ == "__main__":
-    test_image_path = "D:\Desktop Data\ML\Projects\Context\Context\sample_images\sample_screenshot.png"
+    test_image_path = r"D:\Desktop Data\ML\Projects\Context\Context\sample_images\sample_screenshot.png"
     run_ocr_test(test_image_path)

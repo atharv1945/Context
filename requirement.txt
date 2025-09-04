@@ -4,3 +4,4 @@ sentence-transformers
 chromadb
 pytesseract
 Pillow
+hf_xet
