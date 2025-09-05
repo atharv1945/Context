@@ -1,5 +1,6 @@
 import chromadb
 import os
+from src.pipeline import EMBEDDING_MODEL
 
 DB_PATH = "chroma_db" 
 COLLECTION_NAME = "context_collection"
@@ -39,3 +40,23 @@ def add_item(analysis_result: dict):
         print(f"Successfully added '{os.path.basename(file_path)}' to the database.")
     except Exception as e:
         print(f"Error adding item {file_path} to DB: {e}")
+   
+        
+def search(query_text: str, n_results: int = 3) -> dict:
+    
+    if not COLLECTION or not EMBEDDING_MODEL:
+        print("Database or embedding model not initialized.")
+        return {}
+
+    print(f"\nSearching for: '{query_text}'")
+    
+    query_vector = EMBEDDING_MODEL.encode(query_text).tolist()
+    
+    results = COLLECTION.query(
+        query_embeddings=[query_vector],
+        n_results=n_results,
+        include=["metadatas", "distances"] 
+    )
+    
+    print("Search complete.")
+    return results
