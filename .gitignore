@@ -1,35 +1,22 @@
-# .gitignore
-
-# --- Virtual Environment ---
-# Never commit the virtual environment folder
 venv/
 .venv/
 
-# --- Python Cache & Compiled Files ---
-# Ignore the Python bytecode and cache folders
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# --- Local Databases ---
-# Ignore the directory where ChromaDB stores its persistent data
 chroma/
-# Also ignore other common local database files
 *.db
 *.sqlite3
 
-# --- IDE / Editor specific files ---
-# Ignore settings from popular editors like VSCode and PyCharm
 .vscode/
 .idea/
 
-# --- Operating System specific files ---
-# Ignore macOS specific files
 .DS_Store
 
-# --- Build & Distribution Artifacts ---
-# Not strictly needed now, but good practice for any Python project
 build/
 dist/
 *.egg-info/
+
+chroma_db/ 
