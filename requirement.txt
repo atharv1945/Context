@@ -5,3 +5,6 @@ chromadb
 pytesseract
 Pillow
 hf_xet
+fitz
+PyMuPDF
+watchdog

@@ -5,7 +5,7 @@ from src.pipeline import EMBEDDING_MODEL
 DB_PATH = "chroma_db" 
 COLLECTION_NAME = "context_collection"
 
-print("🧠 Initializing ChromaDB...")
+print("Initializing ChromaDB...")
 try:
     CLIENT = chromadb.PersistentClient(path=DB_PATH)    
     COLLECTION = CLIENT.get_or_create_collection(name=COLLECTION_NAME)
@@ -34,7 +34,8 @@ def add_item(analysis_result: dict):
             metadatas=[{
                 "file_path": file_path,
                 "caption": analysis_result['caption'],
-                "ocr_text": analysis_result['ocr_text']
+                "ocr_text": analysis_result['ocr_text'],
+                "user_caption": analysis_result.get('user_caption', '')
             }]
         )
         print(f"Successfully added '{os.path.basename(file_path)}' to the database.")
