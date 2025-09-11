@@ -53,7 +53,7 @@ def search(query_text: str, n_results: int = 3) -> dict:
         print("Database or embedding model not initialized.")
         return {}
 
-    print(f"\ Searching for: '{query_text}'")
+    print(f"\n Searching for: '{query_text}'")
     
     query_vector = EMBEDDING_MODEL.encode(query_text).tolist()
     
