@@ -47,15 +47,13 @@ def add_item(analysis_result: dict):
     except Exception as e:
         print(f"Error adding item {file_path} to DB: {e}")
    
+   
 def search(query_text: str, n_results: int = 3) -> dict:
-    """
-    Performs a pure semantic search based on a text query.
-    """
     if not COLLECTION or not EMBEDDING_MODEL:
         print("Database or embedding model not initialized.")
         return {}
 
-    print(f"\n🔍 Searching for: '{query_text}'")
+    print(f"\ Searching for: '{query_text}'")
     
     query_vector = EMBEDDING_MODEL.encode(query_text).tolist()
     
