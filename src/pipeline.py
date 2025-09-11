@@ -3,77 +3,72 @@
 from PIL import Image
 import pytesseract
 from sentence_transformers import SentenceTransformer
-from transformers import pipeline
 import numpy as np
-from numpy.linalg import norm
 import os
-import fitz  # PyMuPDF
+import fitz  
+import spacy
+import torch
+import cv2 
 
+# --- 1. CONFIGURATION & OPTIMIZATION ---
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-print("Loading AI models into memory. This might take a moment...")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"✅ Using device: {DEVICE}")
 
+
+print("Loading AI models into memory")
 try:
-    CAPTIONER = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
-    EMBEDDING_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+    EMBEDDING_MODEL = SentenceTransformer('clip-ViT-B-32', device=DEVICE)
+    NER_MODEL = spacy.load("en_core_web_sm")
     print("Models loaded successfully!")
+    
 except Exception as e:
     print(f"Error loading models: {e}")
-    CAPTIONER = None
     EMBEDDING_MODEL = None
+    NER_MODEL = None
 
 
 def analyze_image(file_path: str, user_caption: str = None) -> dict | None:
-    
-    if not CAPTIONER or not EMBEDDING_MODEL:
-        print(" Models are not available. Cannot perform analysis.")
+
+    if not EMBEDDING_MODEL or not NER_MODEL:
+        print("Models are not loaded. Cannot perform analysis.")
         return None
+        
     try:
         print(f"\nAnalyzing image: {os.path.basename(file_path)}...")
-        image = Image.open(file_path).convert("RGB")
-        
-        # OCR 
-        ocr_text = pytesseract.image_to_string(image)
-        print("  - OCR complete.")
-    
-        # Generate Caption
-        caption_result = CAPTIONER(image)
-        caption = caption_result[0]["generated_text"] if caption_result else "No caption generated."
-        print("  - Captioning complete.")
-        
-        # Combine Text
-        context_list = []
-        if user_caption:
-            context_list.append(f"User Note: {user_caption}.")
-        context_list.append(f"Visual Description: {caption}.")
-        context_list.append(f"Text content: {ocr_text.strip()}")
-        
-        combined_text = " ".join(context_list)
-        print("  - Text combined.")
+        image_cv = cv2.imread(file_path)
+        image_rgb = cv2.cvtColor(image_cv, cv2.COLOR_BGR2RGB)
+        pil_image = Image.fromarray(image_rgb)
 
-        # Vector Embedding 
-        embedding = EMBEDDING_MODEL.encode(combined_text, normalize_embeddings=True)
-        print("Embedding complete.")
-
+        ocr_text = pytesseract.image_to_string(pil_image)
+        
+        doc = NER_MODEL(ocr_text)
+        tags = list(set([ent.text for ent in doc.ents])) 
+        
+        # --- Step C: Unified Multimodal Embedding ---
+        image_embedding = EMBEDDING_MODEL.encode(pil_image, normalize_embeddings=True)
+        
+        text_to_embed = f"{user_caption or ''} {ocr_text}"
+        text_embedding = EMBEDDING_MODEL.encode(text_to_embed, normalize_embeddings=True)
+        
+        combined_embedding = np.mean([image_embedding, text_embedding * 1.2], axis=0)
+        
         return {
             "file_path": file_path,
             "ocr_text": ocr_text,
-            "caption": caption,
-            "combined_text": combined_text,
-            # Convert numpy array to a standard list for better compatibility (e.g., with JSON)
-            "vector": embedding.tolist() 
+            "tags": tags,
+            "user_caption": user_caption or "",
+            "vector": combined_embedding.tolist()
         }
-
-    except FileNotFoundError:
-        print(f"ERROR: File not found at {file_path}")
-        return None
     except Exception as e:
-        print(f"An unexpected error occurred during analysis: {e}")
+        print(f"An unexpected error occurred during image analysis for {file_path}: {e}")
         return None
 
 def analyze_pdf(file_path: str, user_caption: str = None) -> list[dict]:
-    if not EMBEDDING_MODEL or not CAPTIONER:
-        print("Models not available.")
+
+    if not EMBEDDING_MODEL or not NER_MODEL:
+        print("Models are not loaded. Cannot perform analysis.")
         return []
 
     try:
@@ -84,32 +79,34 @@ def analyze_pdf(file_path: str, user_caption: str = None) -> list[dict]:
         for page_num in range(doc.page_count):
             page = doc.load_page(page_num)
             
+            # Extract Text from Page 
             ocr_text = page.get_text()
             
+            # NER Tag Extraction from Page Text 
+            doc_ner = NER_MODEL(ocr_text)
+            tags = list(set([ent.text for ent in doc_ner.ents]))
+            
+            # Unified Multimodal Embedding for the Page
             pix = page.get_pixmap()
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            pil_image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             
-            caption_result = CAPTIONER(img)
-            caption = caption_result[0]['generated_text'] if caption_result else "No visual elements detected."
+            image_embedding = EMBEDDING_MODEL.encode(pil_image, normalize_embeddings=True)
             
+            text_to_embed = f"{user_caption or ''} {ocr_text}"
+            text_embedding = EMBEDDING_MODEL.encode(text_to_embed, normalize_embeddings=True)
+            
+            combined_embedding = np.mean([image_embedding, text_embedding * 1.2], axis=0)
+            
+            # Append Page Data
             page_id = f"{file_path}_page_{page_num + 1}"
-            context_list = []
-            if user_caption:
-                context_list.append(f"User Note for PDF: {user_caption}.")
-            context_list.append(f"Page {page_num + 1} Visual Description: {caption}.")
-            context_list.append(f"Page {page_num + 1} Text content: {ocr_text.strip()}")
-            combined_text = " ".join(context_list)
-            
-            embedding = EMBEDDING_MODEL.encode(combined_text)
-            
             results.append({
                 "file_path": page_id, 
                 "original_pdf_path": file_path,
                 "page_num": page_num + 1,
                 "ocr_text": ocr_text,
-                "caption": caption,
+                "tags": tags,
                 "user_caption": user_caption or "",
-                "vector": embedding.tolist()
+                "vector": combined_embedding.tolist()
             })
             print(f"  - Analyzed page {page_num + 1}/{doc.page_count}")
         
@@ -120,21 +117,31 @@ def analyze_pdf(file_path: str, user_caption: str = None) -> list[dict]:
         print(f"Error analyzing PDF {file_path}: {e}")
         return []
 
+#DIRECT EXECUTION TEST BLOCK 
 if __name__ == "__main__":
-    print("\n--- Running a direct test of the full analysis pipeline ---")
-    
-    sample_image_path = r"D:\Desktop Data\ML\Projects\Context\Context\sample_images\sample_screenshot.png"
-    
+    print("\n--- Running a direct test of the IMAGE analysis pipeline ---")
+    sample_image_path = "sample_images/sample_screenshot.png" 
     if os.path.exists(sample_image_path):
-        analysis_result = analyze_image(sample_image_path)
-        
-        if analysis_result:
-            print("\nAnalysis successful! Here's the result:")
-            print("=" * 40)
-            print(f"File Path: {analysis_result['file_path']}")
-            print(f"Generated Caption: {analysis_result['caption']}")
-            print(f"Extracted OCR Text (first 150 chars): {analysis_result['ocr_text'][:150].strip()}...")
-            print(f"Vector Dimension: {len(analysis_result['vector'])}")  
+        image_result = analyze_image(sample_image_path)
+        if image_result:
+            print("\nImage Analysis successful!")
+            print(f"Tags found: {image_result['tags']}")
+            print(f"Vector Dimension: {len(image_result['vector'])}")
             print("=" * 40)
     else:
-        print(f"Test image not found at '{sample_image_path}'. Please verify the path.")
+        print(f"Test image not found at '{sample_image_path}'. Skipping test.")
+
+    # Test for PDF analysis
+    print("\n--- Running a direct test of the PDF analysis pipeline ---")
+    sample_pdf_path = "sample_images/sample_doc.pdf" 
+    if os.path.exists(sample_pdf_path):
+        pdf_results = analyze_pdf(sample_pdf_path)
+        if pdf_results:
+            print(f"\nPDF Analysis successful! Analyzed {len(pdf_results)} pages.")
+            print("--- Data for Page 1 ---")
+            first_page = pdf_results[0]
+            print(f"Tags found: {first_page['tags']}")
+            print(f"Vector Dimension: {len(first_page['vector'])}")
+            print("=" * 40)
+    else:
+        print(f"⚠️ Test PDF not found at '{sample_pdf_path}'. Skipping test.")

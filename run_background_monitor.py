@@ -8,8 +8,6 @@ from src.pipeline import analyze_image, analyze_pdf
 from src.database_manager import add_item
 
 # --- Configuration ---
-# IMPORTANT: Update these paths to the folders you want to watch on your machine
-# You can add more paths to the list
 PATHS_TO_WATCH = [
     os.path.expanduser("~/Desktop"),
     os.path.expanduser("~/Downloads")
