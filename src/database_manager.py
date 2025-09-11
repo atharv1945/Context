@@ -1,6 +1,6 @@
 import chromadb
 import os
-from pipeline import EMBEDDING_MODEL
+from src.pipeline import EMBEDDING_MODEL
 
 
 DB_PATH = "chroma_db" 
@@ -65,3 +65,17 @@ def search(query_text: str, n_results: int = 3) -> dict:
     
     print("Search complete.")
     return results
+
+def delete_item(file_path: str):
+    if not COLLECTION:
+        print(" Database not initialized. Cannot delete item.")
+        return
+    
+    try:
+        if file_path.lower().endswith('.pdf'):
+            possible_page_ids = [f"{file_path}_page_{i+1}" for i in range(500)] 
+            COLLECTION.delete(ids=possible_page_ids)        
+        COLLECTION.delete(ids=[file_path])
+        print(f" Successfully removed entries for '{os.path.basename(file_path)}' from the database.")
+    except Exception as e:
+        print(f" Error deleting item {file_path} from DB: {e}")
