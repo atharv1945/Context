@@ -9,8 +9,7 @@ from src.database_manager import add_item, delete_item
 
 # --- Configuration ---
 PATHS_TO_WATCH = [
-    os.path.expanduser("~/Desktop"),
-    os.path.expanduser("~/Downloads")
+    os.path.expanduser(r"~/Desktop\test_folder"),  # Example path
 ]
 
 PROCESSED_FILES = set()
