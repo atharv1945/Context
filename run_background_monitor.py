@@ -15,7 +15,7 @@ PATHS_TO_WATCH = [
 PROCESSED_FILES = set()
 PROCESSING_LOCK = threading.Lock()
 
-def process_file_if_new(file_path: str):
+def process_file_if_new(file_path: str, user_caption: str = None):
     global PROCESSED_FILES
     with PROCESSING_LOCK:
         if file_path in PROCESSED_FILES:
@@ -28,11 +28,12 @@ def process_file_if_new(file_path: str):
         PROCESSED_FILES.add(file_path)
         
     #USER CAPTION    
-    print("-" * 30)
-    user_caption = input(f" > Add an optional note for '{filename}' (or press Enter to skip): ")
-    if not user_caption.strip():
-        user_caption = None
-    print("-" * 30)
+    if user_caption is None:
+        print("-" * 30)
+        user_caption = input(f" > Add an optional note for '{filename}' (or press Enter to skip): ")
+        if not user_caption.strip():
+            user_caption = None
+        print("-" * 30)
     
     time.sleep(1) 
     last_size = -1
