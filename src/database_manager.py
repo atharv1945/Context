@@ -1,3 +1,4 @@
+
 import chromadb
 import os
 from src.pipeline import EMBEDDING_MODEL
@@ -40,19 +41,22 @@ def add_item(analysis_result: dict):
     else:
         tag_list = []
 
+    # ChromaDB metadata values must be primitive types. Convert the list of tags to a single string.
+    tags_as_string = ", ".join(tag_list)
+
     try:
         COLLECTION.add(
             ids=[file_path],
             embeddings=[analysis_result['vector']],
             metadatas=[{
-                "file_path": file_path,
-                "caption": analysis_result.get("caption", ""),
+                "file_path": analysis_result.get("original_pdf_path", file_path), # Use original path for PDFs
+                "page_id": file_path, # This is the unique ID for the item (image path or page path)
                 "ocr_text": analysis_result.get("ocr_text", ""),
-                "tags": tag_list,
+                "tags": tags_as_string,
                 "user_caption": analysis_result.get("user_caption", "")
             }]
         )
-        print(f"✅ Successfully added '{os.path.basename(file_path)}' to the database with tags {tag_list}")
+        print(f"✅ Successfully added '{os.path.basename(file_path)}' to the database.")
     except Exception as e:
         print(f"Error adding item {file_path} to DB: {e}")
    
@@ -98,33 +102,35 @@ def get_graph_for_entity(entity_name: str, limit: int = 25) -> dict:
     query_tag = entity_name.lower()
 
     try:
-        results = COLLECTION.get(
-            where={"tags": {"$in": [query_tag]}},  # works directly on lists
+        # The strategy is to fetch more results based on semantic similarity and then filter in Python.
+        # We must manually create the embedding to ensure it matches the model used for indexing (clip-ViT-B-32).
+        query_vector = EMBEDDING_MODEL.encode(entity_name).tolist()
+
+        results = COLLECTION.query(
+            query_embeddings=[query_vector],
             include=["metadatas"],
-            limit=1000
+            n_results=limit * 5 # Fetch more to have a good pool for filtering
         )
     except Exception as e:
         print(f"Error during query: {e}")
         return {"nodes": [], "edges": []}
 
-    if not results or not results.get("metadatas"):
+    if not results or not results.get("metadatas") or not results["metadatas"][0]:
         return {"nodes": [], "edges": []}
 
-    # Since tags are stored as a list, just check membership
-    filtered_items = [
-        md for md in results["metadatas"]
-        if md and "tags" in md and query_tag in md["tags"]
+    # Filter the results in Python since the DB doesn't support substring matching in `where`.
+    # We check if the query_tag is a whole word in the comma-separated 'tags' string.
+    filtered_metadatas = [
+        md for md in results["metadatas"][0]
+        if query_tag in [tag.strip() for tag in md.get("tags", "").split(",")]
     ][:limit]
-
-    if not filtered_items:
-        return {"nodes": [], "edges": []}
 
     # --- Build Graph ---
     nodes = [{"id": entity_name, "label": entity_name, "type": "entity"}]
     edges = []
 
-    for metadata in filtered_items:
-        file_id = metadata["file_path"]
+    for metadata in filtered_metadatas:
+        file_id = metadata["page_id"] # Use the unique page_id for graph nodes
         file_label = os.path.basename(file_id)
 
         nodes.append({

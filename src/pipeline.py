@@ -47,19 +47,24 @@ def analyze_image(file_path: str, user_caption: str = None) -> dict | None:
         tags = list(set([ent.text for ent in doc.ents])) 
         
         # --- Step C: Unified Multimodal Embedding ---
-        image_embedding = EMBEDDING_MODEL.encode(pil_image, normalize_embeddings=True)
+        image_embedding = EMBEDDING_MODEL.encode(pil_image, normalize_embeddings=True, show_progress_bar=False)
         
         text_to_embed = f"{user_caption or ''} {ocr_text}"
-        text_embedding = EMBEDDING_MODEL.encode(text_to_embed, normalize_embeddings=True)
+        text_embedding = EMBEDDING_MODEL.encode(text_to_embed, normalize_embeddings=True, show_progress_bar=False)
         
+        # Combine the embeddings with a slight weight towards text
         combined_embedding = np.mean([image_embedding, text_embedding * 1.2], axis=0)
+        
+        # Re-normalize the final combined vector to ensure it's a unit vector
+        norm = np.linalg.norm(combined_embedding)
+        normalized_combined_embedding = combined_embedding / norm
         
         return {
             "file_path": file_path,
-            "ocr_text": ocr_text,
+            "ocr_text": ocr_text, # The full text from the image
             "tags": tags,
             "user_caption": user_caption or "",
-            "vector": combined_embedding.tolist()
+            "vector": normalized_combined_embedding.tolist()
         }
     except Exception as e:
         print(f"An unexpected error occurred during image analysis for {file_path}: {e}")
@@ -90,12 +95,17 @@ def analyze_pdf(file_path: str, user_caption: str = None) -> list[dict]:
             pix = page.get_pixmap()
             pil_image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             
-            image_embedding = EMBEDDING_MODEL.encode(pil_image, normalize_embeddings=True)
+            image_embedding = EMBEDDING_MODEL.encode(pil_image, normalize_embeddings=True, show_progress_bar=False)
             
             text_to_embed = f"{user_caption or ''} {ocr_text}"
-            text_embedding = EMBEDDING_MODEL.encode(text_to_embed, normalize_embeddings=True)
+            text_embedding = EMBEDDING_MODEL.encode(text_to_embed, normalize_embeddings=True, show_progress_bar=False)
             
+            # Combine the embeddings with a slight weight towards text
             combined_embedding = np.mean([image_embedding, text_embedding * 1.2], axis=0)
+            
+            # Re-normalize the final combined vector
+            norm = np.linalg.norm(combined_embedding)
+            normalized_combined_embedding = combined_embedding / norm
             
             # Append Page Data
             page_id = f"{file_path}_page_{page_num + 1}"
@@ -106,7 +116,7 @@ def analyze_pdf(file_path: str, user_caption: str = None) -> list[dict]:
                 "ocr_text": ocr_text,
                 "tags": tags,
                 "user_caption": user_caption or "",
-                "vector": combined_embedding.tolist()
+                "vector": normalized_combined_embedding.tolist()
             })
             print(f"  - Analyzed page {page_num + 1}/{doc.page_count}")
         

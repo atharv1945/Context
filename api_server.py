@@ -19,7 +19,7 @@ app = FastAPI(
 @app.on_event("startup")
 async def _start_background_monitor():
     try:
-        monitor_thread = threading.Thread(target=start_background_monitor, daemon=True)
+        monitor_thread = threading.Thread(target=lambda: start_background_monitor(interactive=False), daemon=True)
         monitor_thread.start()
         print("Background monitor started.")
     except Exception as e:
