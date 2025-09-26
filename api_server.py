@@ -6,7 +6,7 @@ import os
 import threading
 from src.database_manager import search, delete_item, get_graph_for_entity
 from src.map_manager import create_map, get_all_maps, get_map_data, add_node_to_map, create_edge
-from run_background_monitor import process_file_if_new
+from run_background_monitor import process_file_if_new, main as start_background_monitor
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -14,6 +14,16 @@ app = FastAPI(
     description="API for searching through indexed files using AI-powered semantic search",
     version="1.0.0"
 )
+
+# Start background file monitor on API startup
+@app.on_event("startup")
+async def _start_background_monitor():
+    try:
+        monitor_thread = threading.Thread(target=start_background_monitor, daemon=True)
+        monitor_thread.start()
+        print("Background monitor started.")
+    except Exception as e:
+        print(f"Failed to start background monitor: {e}")
 
 # Add CORS middleware to allow frontend connections
 app.add_middleware(

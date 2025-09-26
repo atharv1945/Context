@@ -1,0 +1,438 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom background with image and gradient overlay */
+.bg-context-dark {
+  background: 
+    linear-gradient(135deg, rgba(88, 28, 135, 0.9) 0%, rgba(124, 58, 237, 0.8) 50%, rgba(168, 85, 247, 0.7) 100%),
+    url('/assets/background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+}
+
+/* Dark theme card styles */
+.card-dark {
+  background: rgba(30, 30, 30, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.card-dark:hover {
+  background: rgba(40, 40, 40, 0.9);
+  border-color: rgba(168, 85, 247, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Glass morphism search bar */
+.search-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50px;
+}
+
+.search-glass:focus-within {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.1);
+}
+
+/* Header glass effect */
+.header-glass {
+  background: rgba(88, 28, 135, 0.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Figma-style shimmer animation for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Modal animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+
+
+/* Focus styles for better accessibility */
+.focus-visible:focus {
+  outline: 2px solid #a855f7;
+  outline-offset: 2px;
+}
+
+/* Dark theme text colors - improved visibility */
+.text-dark-primary {
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.text-dark-secondary {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.text-dark-muted {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* Better contrast text utilities */
+.text-high-contrast {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.text-medium-contrast {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.text-subtle-contrast {
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+/* Button styles for dark theme */
+.btn-primary-dark {
+  background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+}
+
+.btn-primary-dark:hover {
+  background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+  transform: translateY(-1px);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card-dark {
+    border-color: #fff;
+    background: rgba(0, 0, 0, 0.9);
+  }
+  
+  .text-dark-secondary {
+    color: #fff;
+  }
+  
+  .search-glass {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: #fff;
+  }
+}
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', system-ui, sans-serif;
+  }
+  
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    font-family: var(--font-inter);
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply text-neutral-900 bg-neutral-50 font-sans;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  
+  /* Typography hierarchy matching Figma design */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold text-neutral-900 tracking-tight;
+  }
+  
+  h1 {
+    @apply text-4xl lg:text-5xl leading-tight;
+  }
+  
+  h2 {
+    @apply text-3xl lg:text-4xl leading-tight;
+  }
+  
+  h3 {
+    @apply text-2xl lg:text-3xl leading-snug;
+  }
+  
+  h4 {
+    @apply text-xl lg:text-2xl leading-snug;
+  }
+  
+  h5 {
+    @apply text-lg lg:text-xl leading-normal;
+  }
+  
+  h6 {
+    @apply text-base lg:text-lg leading-normal;
+  }
+  
+  p {
+    @apply text-neutral-700 leading-relaxed;
+  }
+  
+  /* Focus styles for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-white;
+  }
+  
+  /* Selection styles */
+  ::selection {
+    @apply bg-primary-100 text-primary-900;
+  }
+}
+
+@layer components {
+  /* Button variants matching Figma design */
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium px-6 py-3 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-100 hover:bg-secondary-200 active:bg-secondary-300 text-secondary-800 font-medium px-6 py-3 rounded-xl transition-all duration-200 border border-secondary-200 hover:border-secondary-300;
+  }
+  
+  .btn-outline {
+    @apply bg-transparent hover:bg-primary-50 active:bg-primary-100 text-primary-600 font-medium px-6 py-3 rounded-xl transition-all duration-200 border border-primary-300 hover:border-primary-400 focus:border-primary-500;
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent hover:bg-neutral-100 active:bg-neutral-200 text-neutral-700 font-medium px-6 py-3 rounded-xl transition-all duration-200;
+  }
+  
+  .btn-sm {
+    @apply px-4 py-2 text-sm;
+  }
+  
+  .btn-lg {
+    @apply px-8 py-4 text-lg;
+  }
+  
+  /* Card styles matching Figma design */
+  .card {
+    @apply bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-neutral-200 backdrop-blur-sm;
+  }
+  
+  .card-purple {
+    @apply bg-white rounded-2xl shadow-purple hover:shadow-purple-lg transition-all duration-300 border border-primary-200 backdrop-blur-sm;
+  }
+  
+  .card-interactive {
+    @apply cursor-pointer hover:scale-[1.02] active:scale-[0.98];
+  }
+  
+  /* Input styles matching Figma design */
+  .input-primary {
+    @apply w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white placeholder:text-neutral-400;
+  }
+  
+  .input-search {
+    @apply input-primary pl-12 pr-4 bg-white/80 backdrop-blur-sm border-neutral-200 focus:bg-white;
+  }
+  
+  /* Loading spinner matching Figma design */
+  .spinner {
+    @apply animate-spin rounded-full border-2 border-neutral-200 border-t-primary-600;
+  }
+  
+  .spinner-sm {
+    @apply w-4 h-4;
+  }
+  
+  .spinner-md {
+    @apply w-6 h-6;
+  }
+  
+  .spinner-lg {
+    @apply w-8 h-8;
+  }
+  
+  /* Status indicators */
+  .status-online {
+    @apply bg-green-500 text-white;
+  }
+  
+  .status-offline {
+    @apply bg-red-500 text-white;
+  }
+  
+  .status-warning {
+    @apply bg-yellow-500 text-white;
+  }
+  
+  /* Modal and overlay styles */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50;
+  }
+  
+  .modal-content {
+    @apply bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6 animate-scale-in;
+  }
+  
+  /* Context menu styles */
+  .context-menu {
+    @apply bg-white rounded-xl shadow-lg border border-neutral-200 py-2 min-w-48 animate-slide-down backdrop-blur-sm;
+  }
+  
+  .context-menu-item {
+    @apply px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 cursor-pointer transition-colors duration-150 flex items-center gap-3;
+  }
+  
+  .context-menu-separator {
+    @apply border-t border-neutral-200 my-1;
+  }
+}
+
+@layer utilities {
+  /* Gradient text effects */
+  .text-gradient-purple {
+    @apply bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent;
+  }
+  
+  .text-gradient-blue {
+    @apply bg-gradient-to-r from-accent-500 to-primary-500 bg-clip-text text-transparent;
+  }
+  
+  /* Background gradients matching Figma design */
+  .bg-gradient-purple {
+    @apply bg-gradient-to-br from-primary-50 via-white to-secondary-50;
+  }
+  
+  .bg-gradient-purple-dark {
+    @apply bg-gradient-to-br from-primary-100 to-secondary-100;
+  }
+  
+  .bg-gradient-radial {
+    background: radial-gradient(ellipse at center, rgb(245 243 255) 0%, rgb(255 255 255) 70%);
+  }
+  
+  /* Glow effects for interactive elements */
+  .shadow-glow-purple {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+  }
+  
+  .shadow-glow-purple-strong {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.25);
+  }
+  
+  .shadow-glow-accent {
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
+  }
+  
+  /* Glass morphism effects */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+  
+  .glass-purple {
+    @apply bg-primary-50/80 backdrop-blur-md border border-primary-200/50;
+  }
+  
+  /* Scroll styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(203 213 225);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(148 163 184);
+  }
+  
+  /* Layout utilities */
+  .container-app {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .section-padding {
+    @apply py-12 lg:py-16;
+  }
+  
+  /* Animation utilities */
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+  
+  .animate-bounce-gentle {
+    animation: bounceGentle 2s infinite;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes bounceGentle {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-4px);
+    }
+    60% {
+      transform: translateY(-2px);
+    }
+  }
+}

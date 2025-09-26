@@ -16,7 +16,7 @@ app = FastAPI(
 # Add CORS middleware to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=["*", "https://preview--synth-map.lovable.app"],  # Allow your Loveable frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

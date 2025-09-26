@@ -9,7 +9,8 @@ from src.database_manager import add_item, delete_item
 
 # --- Configuration ---
 PATHS_TO_WATCH = [
-    os.path.expanduser(r"~/Desktop\test_folder"),  # Example path
+    # Explicit Windows path for OneDrive Desktop test_folder
+    r"C:\\Users\\ashvi\\OneDrive\\Desktop\\test_folder",
 ]
 
 PROCESSED_FILES = set()
@@ -70,11 +71,13 @@ def handle_deleted_file(file_path: str):
 class FileEventHandler(FileSystemEventHandler):
     def on_created(self, event):
         if not event.is_directory:
-            process_file_if_new(event.src_path)
+            # Pass empty caption to avoid interactive prompt in background threads
+            process_file_if_new(event.src_path, user_caption="")
 
     def on_moved(self, event):
         if not event.is_directory:
-            process_file_if_new(event.dest_path)
+            # Pass empty caption to avoid interactive prompt in background threads
+            process_file_if_new(event.dest_path, user_caption="")
     
     def on_deleted(self, event): 
         if not event.is_directory:
@@ -90,7 +93,8 @@ def polling_safety_net(paths: list[str], interval: int = 150):
                     for root, _, files in os.walk(path):
                         for filename in files:
                             file_path = os.path.join(root, filename)
-                            process_file_if_new(file_path)
+                            # Pass empty caption to avoid interactive prompt in background threads
+                            process_file_if_new(file_path, user_caption="")
         except Exception as e:
             print(f"Error during polling: {e}")
         time.sleep(interval)
