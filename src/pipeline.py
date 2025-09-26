@@ -130,7 +130,8 @@ def analyze_pdf(file_path: str, user_caption: str = None) -> list[dict]:
 #DIRECT EXECUTION TEST BLOCK 
 if __name__ == "__main__":
     print("\n--- Running a direct test of the IMAGE analysis pipeline ---")
-    sample_image_path = "sample_images/sample_screenshot.png" 
+    # Use absolute path to be safe when running from different directories
+    sample_image_path = os.path.join(os.path.dirname(__file__), '..', 'sample_images', 'sample_screenshot.png')
     if os.path.exists(sample_image_path):
         image_result = analyze_image(sample_image_path)
         if image_result:
@@ -143,7 +144,7 @@ if __name__ == "__main__":
 
     # Test for PDF analysis
     print("\n--- Running a direct test of the PDF analysis pipeline ---")
-    sample_pdf_path = "sample_images/sample_doc.pdf" 
+    sample_pdf_path = os.path.join(os.path.dirname(__file__), '..', 'sample_images', 'sample_doc.pdf')
     if os.path.exists(sample_pdf_path):
         pdf_results = analyze_pdf(sample_pdf_path)
         if pdf_results:
