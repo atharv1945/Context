@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import os
 import threading
-from src.database_manager import search, delete_item, get_graph_for_entity
+from src.database_manager import search, delete_item, get_graph_for_entity, get_all_graph_data
 from src.map_manager import create_map, get_all_maps, get_map_data, add_node_to_map, create_edge, delete_map
 from run_background_monitor import process_file_if_new, main as start_background_monitor, get_active_thread_count
 
@@ -45,9 +45,6 @@ class DeleteFileRequest(BaseModel):
 class StatusResponse(BaseModel):
     status: str
     message: Optional[str] = None
-
-class OpenFileRequest(BaseModel):
-    file_path: str
 
 class IndexingStatusResponse(BaseModel):
     is_indexing: bool
@@ -115,7 +112,8 @@ def format_search_results(search_results: dict, limit: int) -> List[dict]:
         # The file_path should always point to the original file
         original_file_path = metadata['file_path']
         
-        # Calculate similarity score (1 - distance, since lower distance = higher similarity)
+        # Calculate similarity score for cosine distance (1 - distance, since lower distance = higher similarity)
+        # For cosine distance, values range from 0 to 2, where 0 = identical, 2 = opposite
         similarity = max(0.0, 1.0 - distance)
         
         # The frontend expects an array for tags. The DB stores it as a comma-separated string.
@@ -189,21 +187,6 @@ async def search_files(
             detail=f"Search failed: {str(e)}"
         )
 
-@app.post("/open-file", response_model=StatusResponse)
-async def open_file(request: OpenFileRequest):
-    """
-    Receives a request to open a file. In a web-only context, this is a no-op for security reasons.
-    In a desktop-wrapped application (e.g., Electron), this endpoint could be intercepted
-    by the main process to open the file natively.
-    """
-    file_path = request.file_path
-    print(f"Received request to open file: {file_path}")
-    # For security, the web server does not open files. This action should be handled
-    # by a desktop wrapper if this is a desktop app.
-    return StatusResponse(
-        status="Request received",
-        message=f"Server acknowledged request to open {os.path.basename(file_path)}. This is a no-op in a browser environment."
-    )
 @app.get("/status/indexing", response_model=IndexingStatusResponse)
 async def get_indexing_status():
     """
@@ -317,6 +300,29 @@ async def get_entity_graph(name: str = Query(..., description="Entity name to ge
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate graph for entity '{name}': {str(e)}"
+        )
+
+@app.get("/graph/all", response_model=GraphResponse)
+async def get_all_graph():
+    """
+    Retrieves all entities and their relationships (Complete Graph).
+    
+    Returns a graph structure with all nodes and edges showing relationships between entities and files.
+    """
+    try:
+        graph_data = get_all_graph_data()
+        # Add a null position to nodes for frontend consistency.
+        # The frontend will be responsible for auto-layout.
+        for node in graph_data.get("nodes", []):
+            if "position" not in node:
+                node["position"] = None
+
+        return GraphResponse(nodes=graph_data.get("nodes", []), edges=graph_data.get("edges", []))
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate complete graph: {str(e)}"
         )
 
 @app.post("/maps", response_model=MapResponse)
@@ -466,8 +472,9 @@ async def add_node_to_user_map(map_id: int, request: AddNodeRequest):
                 detail=f"Map with ID {map_id} not found"
             )
         
-        # Validate that the file exists
-        if not os.path.exists(request.file_path):
+        # For mind maps, we allow both file paths and concept labels
+        # Only validate file existence if it looks like a real file path
+        if not request.file_path.startswith("concept_") and not os.path.exists(request.file_path):
             raise HTTPException(
                 status_code=404,
                 detail=f"File not found: {request.file_path}"
@@ -539,6 +546,113 @@ async def create_edge_in_user_map(map_id: int, request: CreateEdgeRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create edge: {str(e)}"
+        )
+
+# Update node position
+class UpdateNodeRequest(BaseModel):
+    x: int
+    y: int
+
+@app.put("/maps/{map_id}/nodes/{node_id}", response_model=StatusResponse)
+async def update_node_position(map_id: int, node_id: int, request: UpdateNodeRequest):
+    """
+    Updates the position of a node in a user-curated map.
+    
+    - **map_id**: The ID of the map containing the node
+    - **node_id**: The ID of the node to update
+    - **x**: New X position
+    - **y**: New Y position
+    """
+    try:
+        # Update node position in the database
+        from src.map_manager import update_node_position
+        update_node_position(map_id, node_id, request.x, request.y)
+        
+        return StatusResponse(
+            status="Node updated successfully",
+            message=f"Node {node_id} position updated to ({request.x}, {request.y})"
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update node: {str(e)}"
+        )
+
+# Delete node
+@app.delete("/maps/{map_id}/nodes/{node_id}", response_model=StatusResponse)
+async def delete_node_from_map(map_id: int, node_id: int):
+    """
+    Deletes a node from a user-curated map.
+    
+    - **map_id**: The ID of the map containing the node
+    - **node_id**: The ID of the node to delete
+    """
+    try:
+        from src.map_manager import delete_node_from_map as delete_node
+        delete_node(map_id, node_id)
+        
+        return StatusResponse(
+            status="Node deleted successfully",
+            message=f"Node {node_id} has been removed from map {map_id}"
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete node: {str(e)}"
+        )
+
+# Update edge label
+class UpdateEdgeRequest(BaseModel):
+    label: Optional[str] = None
+
+@app.put("/maps/{map_id}/edges/{edge_id}", response_model=StatusResponse)
+async def update_edge_label(map_id: int, edge_id: int, request: UpdateEdgeRequest):
+    """
+    Updates the label of an edge in a user-curated map.
+    
+    - **map_id**: The ID of the map containing the edge
+    - **edge_id**: The ID of the edge to update
+    - **label**: New edge label (optional)
+    """
+    try:
+        from src.map_manager import update_edge_label
+        update_edge_label(map_id, edge_id, request.label)
+        
+        return StatusResponse(
+            status="Edge updated successfully",
+            message=f"Edge {edge_id} label updated to '{request.label or 'No label'}'"
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update edge: {str(e)}"
+        )
+
+# Delete edge
+@app.delete("/maps/{map_id}/edges/{edge_id}", response_model=StatusResponse)
+async def delete_edge_from_map(map_id: int, edge_id: int):
+    """
+    Deletes an edge from a user-curated map.
+    
+    - **map_id**: The ID of the map containing the edge
+    - **edge_id**: The ID of the edge to delete
+    """
+    try:
+        from src.map_manager import delete_edge_from_map as delete_edge
+        delete_edge(map_id, edge_id)
+        
+        return StatusResponse(
+            status="Edge deleted successfully",
+            message=f"Edge {edge_id} has been removed from map {map_id}"
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete edge: {str(e)}"
         )
 
 if __name__ == "__main__":
