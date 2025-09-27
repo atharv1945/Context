@@ -41,6 +41,8 @@ export default function ResultCard({ result, onContextMenu }: ResultCardProps) {
   const thumbnail: string | undefined = (result as any).thumbnail;
   const stableId: string = (result as any).id?.toString() || filePath || filename;
 
+  const originalPdfPath: string | undefined = (result as any).original_pdf_path;
+  const pageNum: number | undefined = (result as any).page_num;
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     if (onContextMenu) {
@@ -48,11 +50,25 @@ export default function ResultCard({ result, onContextMenu }: ResultCardProps) {
     }
   };
 
+  const handleOpenFile = () => {
+    // In a standard web browser, directly opening local file paths is a security restriction.
+    // This function is designed to be hooked by a desktop wrapper like Electron or Tauri.
+    // The wrapper would listen for this log and use its native capabilities to open the file.
+    const openPath = originalPdfPath || filePath;
+    if (openPath) {
+      console.log('Request to open file:', {
+        path: openPath,
+        ...(pageNum && { page: pageNum }),
+      });
+      // Example for Electron: window.electron.ipcRenderer.send('open-file', { path: openPath, page: pageNum });
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       // Handle card activation (could open file or show details)
-      console.log('Card activated:', filename);
+      handleOpenFile();
     } else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
       e.preventDefault();
       if (onContextMenu) {
@@ -106,6 +122,7 @@ export default function ResultCard({ result, onContextMenu }: ResultCardProps) {
     <div 
       className="group card-dark focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 transition-all duration-300 overflow-hidden cursor-pointer"
       onContextMenu={handleContextMenu}
+      onClick={handleOpenFile}
       onKeyDown={handleKeyDown}
       tabIndex={0}
       role="button"
@@ -141,10 +158,6 @@ export default function ResultCard({ result, onContextMenu }: ResultCardProps) {
           <span className="uppercase">{(fileType.split('/')[1]) || 'FILE'}</span>
         </div>
         
-        {/* Similarity Score */}
-        <div className="absolute top-3 right-3 px-2 py-1 rounded-md text-sm font-bold bg-purple-500/90 text-white backdrop-blur-sm">
-          {similarityScore}%
-        </div>
       </div>
       
       {/* Content Section */}
