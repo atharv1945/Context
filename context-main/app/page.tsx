@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
+import HomepageSearchBar from '@/components/HomepageSearchBar';
 
 export default function Home() {
   return (
@@ -18,21 +18,7 @@ export default function Home() {
 
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto mb-16">
-              <div className="search-glass p-4 flex items-center">
-                <svg className="w-6 h-6 text-white/70 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search your Document"
-                  className="flex-1 bg-transparent text-high-contrast placeholder-white/80 outline-none text-lg"
-                />
-                <Link href="/search">
-                  <Button className="btn-primary-dark ml-4 px-8">
-                    View
-                  </Button>
-                </Link>
-              </div>
+              <HomepageSearchBar />
             </div>
           </div>
 
