@@ -48,18 +48,18 @@ Our system is a robust, event-driven service built on a modern AI stack.
 - ChromaDB: We use ChromaDB as a persistent, on-disk vector database for high-speed similarity search. It stores the vector "fingerprints" and their associated metadata (OCR text, tags, user captions).
 
 ## ⚙️ Setup and Installation
-Follow these steps to get the backend service running.
+Follow these steps to get the full application running.
 
-1. Prerequisites:
+### 1. Prerequisites
 
 - Python 3.9+
-
+- Node.js and npm (for the frontend)
 - Google Tesseract OCR Engine. Make sure it's installed on your system and added to your PATH.
 
-2. Clone the Repository:
-``` bash
-git clone [https://github.com/your-repo/project-context.git](https://github.com/your-repo/project-context.git)
-cd project-context
+### 2. Clone the Repository
+```bash
+git clone https://github.com/your-repo/project-context.git
+cd Context
 ```
 
 3. Set up Virtual Environment & Install Dependencies:

@@ -16,6 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 PROCESSED_FILES: Set[str] = set()
 PROCESSING_LOCK = threading.Lock()
 SHUTDOWN_EVENT = threading.Event()
+ACTIVE_PROCESSING_THREADS = threading.local()
 
 def is_valid_file(file_path: str) -> bool:
     """Checks if a file is valid for processing."""
@@ -34,6 +35,11 @@ def process_file(file_path: str, user_caption: str = None):
     """Handles the analysis and database addition for a single file."""
     filename = os.path.basename(file_path)
     logging.info(f"Starting analysis for: {filename}")
+    
+    # Increment active thread count
+    if not hasattr(ACTIVE_PROCESSING_THREADS, 'count'):
+        ACTIVE_PROCESSING_THREADS.count = 0
+    ACTIVE_PROCESSING_THREADS.count += 1
 
     # --- Analyze and add to database ---
     try:
@@ -48,6 +54,9 @@ def process_file(file_path: str, user_caption: str = None):
                     add_item(page_data)
     except Exception as e:
         logging.error(f"An unexpected error occurred during analysis of {filename}: {e}")
+    finally:
+        # Decrement active thread count
+        ACTIVE_PROCESSING_THREADS.count -= 1
 
 def wait_for_file_stability_and_process(file_path: str, user_caption: str = None, interactive: bool = False):
     """
@@ -184,3 +193,7 @@ def main(interactive: bool = False):
 
 if __name__ == "__main__":
     main(interactive=True)
+
+def get_active_thread_count() -> int:
+    """Returns the number of active file processing threads."""
+    return getattr(ACTIVE_PROCESSING_THREADS, 'count', 0)

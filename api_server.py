@@ -3,10 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os
-import threading 
+import threading
 from src.database_manager import search, delete_item, get_graph_for_entity
-from src.map_manager import create_map, get_all_maps, get_map_data, add_node_to_map, create_edge
-from run_background_monitor import process_file_if_new, main as start_background_monitor
+from src.map_manager import create_map, get_all_maps, get_map_data, add_node_to_map, create_edge, delete_map
+from run_background_monitor import process_file_if_new, main as start_background_monitor, get_active_thread_count
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -45,6 +45,10 @@ class DeleteFileRequest(BaseModel):
 class StatusResponse(BaseModel):
     status: str
     message: Optional[str] = None
+
+class IndexingStatusResponse(BaseModel):
+    is_indexing: bool
+    active_files: int
 
 class CreateMapRequest(BaseModel):
     name: str
@@ -181,6 +185,20 @@ async def search_files(
             status_code=500, 
             detail=f"Search failed: {str(e)}"
         )
+
+@app.get("/status/indexing", response_model=IndexingStatusResponse)
+async def get_indexing_status():
+    """
+    Checks if the background monitor is currently processing files.
+    This allows the frontend to know if it should wait before enabling search.
+    """
+    try:
+        active_count = get_active_thread_count()
+        is_indexing = active_count > 0
+        return IndexingStatusResponse(is_indexing=is_indexing, active_files=active_count)
+    except Exception as e:
+        # This might happen if the thread-local storage isn't initialized yet
+        return IndexingStatusResponse(is_indexing=False, active_files=0)
 
 @app.post("/index-file", response_model=StatusResponse)
 async def index_file(request: IndexFileRequest):
@@ -327,6 +345,29 @@ async def list_all_maps():
             detail=f"Failed to retrieve maps: {str(e)}"
         )
 
+@app.delete("/maps/{map_id}", response_model=StatusResponse)
+async def delete_user_map(map_id: int):
+    """
+    Deletes a user-curated map and all its contents.
+    """
+    try:
+        success = delete_map(map_id)
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Map with ID {map_id} not found or could not be deleted."
+            )
+        return StatusResponse(
+            status="Map deleted successfully",
+            message=f"Map with ID {map_id} has been deleted."
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete map: {str(e)}"
+        )
 @app.get("/maps/{map_id}", response_model=GraphResponse)
 async def get_map_details(map_id: int):
     """

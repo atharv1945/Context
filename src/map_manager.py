@@ -64,6 +64,20 @@ def create_map(name: str) -> int:
         # Map already exists
         return None
 
+def delete_map(map_id: int) -> bool:
+    """Deletes a map and all its associated nodes and edges."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            # Deleting a map will cascade and delete its nodes and edges if foreign keys are set up with ON DELETE CASCADE
+            # Since they are not, we must delete them manually.
+            cursor.execute("DELETE FROM edges WHERE map_id = ?", (map_id,))
+            cursor.execute("DELETE FROM nodes WHERE map_id = ?", (map_id,))
+            cursor.execute("DELETE FROM maps WHERE id = ?", (map_id,))
+            conn.commit()
+            return cursor.rowcount > 0 # Returns true if a row was deleted
+    except Exception:
+        return False
 
 def get_all_maps() -> list:
     """Returns a list of all available maps."""
