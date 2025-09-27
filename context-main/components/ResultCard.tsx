@@ -50,17 +50,21 @@ export default function ResultCard({ result, onContextMenu }: ResultCardProps) {
     }
   };
 
-  const handleOpenFile = () => {
+  const handleOpenFile = async () => {
     // In a standard web browser, directly opening local file paths is a security restriction.
-    // This function is designed to be hooked by a desktop wrapper like Electron or Tauri.
-    // The wrapper would listen for this log and use its native capabilities to open the file.
+    // This function sends a request to the backend, which can be logged or intercepted by a desktop wrapper.
     const openPath = originalPdfPath || filePath;
     if (openPath) {
-      console.log('Request to open file:', {
-        path: openPath,
-        ...(pageNum && { page: pageNum }),
-      });
-      // Example for Electron: window.electron.ipcRenderer.send('open-file', { path: openPath, page: pageNum });
+      try {
+        await fetch('http://127.0.0.1:8000/open-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ file_path: openPath }),
+        });
+        console.log(`Sent open request for: ${openPath}`);
+      } catch (error) {
+        console.error('Failed to send open-file request:', error);
+      }
     }
   };
 

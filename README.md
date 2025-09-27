@@ -47,6 +47,25 @@ Our system is a robust, event-driven service built on a modern AI stack.
 
 - ChromaDB: We use ChromaDB as a persistent, on-disk vector database for high-speed similarity search. It stores the vector "fingerprints" and their associated metadata (OCR text, tags, user captions).
 
+## Assumptions Made for the "Context" Prototype
+**Technical & Performance Assumptions**
+
+- Sufficient On-Device Resources: We assume the user's desktop or laptop has adequate CPU and RAM (e.g., 8GB+) to run the AI models in the background without a significant negative impact on their primary tasks. GPU acceleration is considered a performance enhancement, not a requirement.
+
+- Standard File Formats: The AI pipeline is optimized for common, unencrypted image formats (.png, .jpg) and standard, text-based PDFs. We assume the system will not frequently encounter password-protected, encrypted, or purely image-based (non-OCRable) PDFs.
+
+- English-Language Content: The chosen Natural Language Processing (NLP) models for embedding (CLIP) and Named Entity Recognition (NER) are optimized for English. We assume the user's documents are primarily in English.
+
+- LLM Feasibility (for Knowledge Graph): For the most advanced relational extraction feature, we assume that a powerful LLM could perform this task effectively and we are simulating that output. We assume this capability will become more accessible for on-device deployment in the near future.
+
+**User Behavior Assumptions**
+
+- Primary File Locations: The background monitor watches the user's Desktop and Downloads folders. We assume these are the primary, high-value locations where users save new, important information that they will want to retrieve later.
+
+- Preference for Automation: We assume users prefer a zero-effort, automated indexing system over a manual one where they would need to actively add files. Our "works in the background" approach is based on this core product hypothesis.
+
+- Initial Internet Connectivity: We assume the user has an internet connection during the initial setup phase to download the required AI models. The core functionality, once set up, is designed to be fully on-device.
+
 ## ⚙️ Setup and Installation
 Follow these steps to get the full application running.
 
@@ -74,28 +93,69 @@ python -m venv venv
 source venv/bin/activate
 
 # Install all required packages from the requirement.txt file
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
-4. Download the NLP Model:
+4. Download the NLP Model and install NPM:
 Run this one-time command to download the necessary spaCy model.
 ```bash
 python -m spacy download en_core_web_sm
+npm install
 ```
-▶️ How to Run
-1. Start the Background Service:
-To start the monitor, simply run the following command in your terminal:
-```bash
-python run_background_monitor.py
-```
-The service is now active! It will print status messages to the console as it detects and processes new files. When a new file is found, it will prompt you directly in the terminal to add an optional user caption.
 
-2. Resetting the Database (for Development):
-If you need to start fresh (e.g., after a model change), you can clear the entire database by running:`
-```bash
-python clear_database.py
+5. **Install Tesseract OCR**:
+   - Windows: Download installer from [GitHub](https://github.com/UB-Mannheim/tesseract/wiki)
+   - Add Tesseract to PATH: `C:\Program Files\Tesseract-OCR`
+   - Verify installation: `tesseract --version`
+
+4. **Configure Monitoring Path**:
+   - Open `config.py`
+   - Locate the `PATHS_TO_WATCH` variable
+   - Change it to your desired folder path:
+```python
+PATHS_TO_WATCH = os.path.expanduser("YOUR_FOLDER_PATH_HERE"),  # e.g.: r"C:\Users\ashvi\OneDrive\Desktop\test_folder"
 ```
-You will be asked to confirm before any data is deleted.
+
+// ...existing code...
+
+## ▶️ How to Run
+
+### 1. Start the Backend Server
+Open a new terminal and run:
+```bash
+# Activate virtual environment if not already activated
+# On Windows:
+.\venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Start the API server
+python api_server.py
+```
+The backend server will start running on `http://localhost:8000`
+
+### 2. Start the Frontend Development Server
+Open another terminal and run:
+```bash
+# Navigate to frontend directory
+cd context-main
+
+# Start the development server
+npm run dev
+```
+The frontend will be available at `http://localhost:3000`
+
+### 3. Verify the Setup
+- Backend API documentation: Visit `http://localhost:8000/docs`
+- Frontend interface: Visit `http://localhost:3000`
+- Check the terminal outputs for any error messages
+
+### Troubleshooting
+If you encounter any issues:
+1. Ensure both terminals are running simultaneously
+2. Check if the ports 8000 and 3000 are available
+3. Verify all prerequisites are installed correctly
+4. Check the application logs in both terminals for error messages
 
 🛣️ Future Roadmap
 - This prototype lays a powerful foundation. Future enhancements could include:
