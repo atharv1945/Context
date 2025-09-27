@@ -90,7 +90,7 @@ export const useMaps = () => {
   };
 };
 
-export const useMap = (mapId: number) => {
+export const useMap = (mapId: string) => {
   const [mapData, setMapData] = useState<MapData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -106,8 +106,31 @@ export const useMap = (mapId: number) => {
         setRetryCount(0);
       }
 
-      const data = await apiService.getMap(mapId.toString());
-      setMapData({ map: { id: mapId, name: "" }, ...data });
+      const data = await apiService.getMap(mapId);
+
+      // Transform backend data to frontend format
+      const transformedNodes: MapNode[] = data.nodes.map((node: any) => ({
+        id: node.id.toString(),
+        label: node.file_path
+          ? node.file_path.split("/").pop() || node.file_path
+          : `Node ${node.id}`,
+        type: node.file_path ? "file" : "concept",
+        position: { x: node.position_x, y: node.position_y },
+        file_path: node.file_path,
+      }));
+
+      const transformedEdges: MapEdge[] = data.edges.map((edge: any) => ({
+        id: edge.id.toString(),
+        fromNodeId: edge.source_node_id.toString(),
+        toNodeId: edge.target_node_id.toString(),
+        label: edge.label || undefined,
+      }));
+
+      setMapData({
+        map: { id: parseInt(mapId), name: "Mind Map" },
+        nodes: transformedNodes,
+        edges: transformedEdges,
+      });
       setRetryCount(0); // Reset on success
     } catch (err) {
       let errorMessage = "Failed to load map";
@@ -131,21 +154,25 @@ export const useMap = (mapId: number) => {
   };
 
   // Add a node to the map
-  const addNode = async (
-    filePath: string,
-    x: number,
-    y: number
-  ): Promise<{ status: string; message: string }> => {
+  const addNode = async (nodeData: {
+    label: string;
+    type: "file" | "concept";
+    position: { x: number; y: number };
+  }): Promise<void> => {
     try {
-      const result = await apiService.addMapNode(
-        mapId.toString(),
+      // For now, we'll use a placeholder file path for concept nodes
+      const filePath =
+        nodeData.type === "file" ? nodeData.label : `concept_${Date.now()}`;
+
+      await apiService.addMapNode(
+        mapId,
         filePath,
-        x,
-        y
+        nodeData.position.x,
+        nodeData.position.y
       );
-      // Note: The backend doesn't return the new node, so we can't update the local state
-      // In a real implementation, you'd need to refetch the map data
-      return result;
+
+      // Refetch the map data to get the updated state
+      await loadMap();
     } catch (err) {
       const error =
         err instanceof Error ? err : new Error("Failed to add node");
@@ -155,24 +182,99 @@ export const useMap = (mapId: number) => {
   };
 
   // Add an edge to the map
-  const addEdge = async (
-    sourceId: number,
-    targetId: number,
-    label: string
-  ): Promise<{ status: string; message: string }> => {
+  const addEdge = async (edgeData: {
+    fromNodeId: string;
+    toNodeId: string;
+    label?: string;
+  }): Promise<void> => {
     try {
-      const result = await apiService.addMapEdge(
-        mapId.toString(),
-        sourceId,
-        targetId,
-        label
+      await apiService.addMapEdge(
+        mapId,
+        parseInt(edgeData.fromNodeId),
+        parseInt(edgeData.toNodeId),
+        edgeData.label || ""
       );
-      // Note: The backend doesn't return the new edge, so we can't update the local state
-      // In a real implementation, you'd need to refetch the map data
-      return result;
+
+      // Refetch the map data to get the updated state
+      await loadMap();
     } catch (err) {
       const error =
         err instanceof Error ? err : new Error("Failed to add edge");
+      setError(error);
+      throw error;
+    }
+  };
+
+  // Update a node
+  const updateNode = async (
+    nodeId: string,
+    updates: Partial<MapNode>
+  ): Promise<void> => {
+    try {
+      if (updates.position) {
+        await apiService.updateMapNode(
+          mapId,
+          nodeId,
+          updates.position.x,
+          updates.position.y
+        );
+      }
+
+      // Refetch the map data to get the updated state
+      await loadMap();
+    } catch (err) {
+      const error =
+        err instanceof Error ? err : new Error("Failed to update node");
+      setError(error);
+      throw error;
+    }
+  };
+
+  // Delete a node
+  const deleteNode = async (nodeId: string): Promise<void> => {
+    try {
+      await apiService.deleteMapNode(mapId, nodeId);
+
+      // Refetch the map data to get the updated state
+      await loadMap();
+    } catch (err) {
+      const error =
+        err instanceof Error ? err : new Error("Failed to delete node");
+      setError(error);
+      throw error;
+    }
+  };
+
+  // Update an edge
+  const updateEdge = async (
+    edgeId: string,
+    updates: Partial<MapEdge>
+  ): Promise<void> => {
+    try {
+      if (updates.label !== undefined) {
+        await apiService.updateMapEdge(mapId, edgeId, updates.label);
+      }
+
+      // Refetch the map data to get the updated state
+      await loadMap();
+    } catch (err) {
+      const error =
+        err instanceof Error ? err : new Error("Failed to update edge");
+      setError(error);
+      throw error;
+    }
+  };
+
+  // Delete an edge
+  const deleteEdge = async (edgeId: string): Promise<void> => {
+    try {
+      await apiService.deleteMapEdge(mapId, edgeId);
+
+      // Refetch the map data to get the updated state
+      await loadMap();
+    } catch (err) {
+      const error =
+        err instanceof Error ? err : new Error("Failed to delete edge");
       setError(error);
       throw error;
     }
@@ -191,6 +293,10 @@ export const useMap = (mapId: number) => {
     error,
     addNode,
     addEdge,
+    updateNode,
+    deleteNode,
+    updateEdge,
+    deleteEdge,
     refetch: () => loadMap(true),
     canRetry: retryCount < 3 && !!error && !error.message.includes("not found"),
     retryCount,

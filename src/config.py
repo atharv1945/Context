@@ -6,7 +6,7 @@ import os
 # Add any paths you want to watch here.
 PATHS_TO_WATCH = [
     # A specific project folder for testing
-    os.path.expanduser(r"C:\Users\athar\Desktop\test_folder"),
+    os.path.expanduser(r"C:\Users\ashvi\OneDrive\Desktop\test_folder"),
 ]
 
 # --- File Processing ---

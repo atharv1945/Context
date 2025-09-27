@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
 
   // Graph endpoints
   GRAPH_ENTITY: "/graph/entity",
+  GRAPH_ALL: "/graph/all",
 
   // Mind map endpoints
   MAPS: "/maps",

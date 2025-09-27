@@ -172,12 +172,14 @@ export class ApiService {
 
   // Graph operations
   async getGraphData(entityName?: string): Promise<GraphData> {
-    const params = entityName ? new URLSearchParams({ name: entityName }) : "";
-    const endpoint = params
-      ? `${API_ENDPOINTS.GRAPH_ENTITY}?${params}`
-      : API_ENDPOINTS.GRAPH_ENTITY;
-
-    return this.fetchWithErrorHandling<GraphData>(endpoint);
+    if (entityName) {
+      const params = new URLSearchParams({ name: entityName });
+      const endpoint = `${API_ENDPOINTS.GRAPH_ENTITY}?${params}`;
+      return this.fetchWithErrorHandling<GraphData>(endpoint);
+    } else {
+      // Use the new endpoint for getting all graph data
+      return this.fetchWithErrorHandling<GraphData>(API_ENDPOINTS.GRAPH_ALL);
+    }
   }
 
   // Mind map operations
@@ -238,6 +240,59 @@ export class ApiService {
           target_id: targetId,
           label: label,
         }),
+      }
+    );
+  }
+
+  async updateMapNode(
+    mapId: string,
+    nodeId: string,
+    x: number,
+    y: number
+  ): Promise<{ status: string; message: string }> {
+    return this.fetchWithErrorHandling<{ status: string; message: string }>(
+      `${API_ENDPOINTS.MAPS}/${mapId}/nodes/${nodeId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ x, y }),
+      }
+    );
+  }
+
+  async deleteMapNode(
+    mapId: string,
+    nodeId: string
+  ): Promise<{ status: string; message: string }> {
+    return this.fetchWithErrorHandling<{ status: string; message: string }>(
+      `${API_ENDPOINTS.MAPS}/${mapId}/nodes/${nodeId}`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
+  async updateMapEdge(
+    mapId: string,
+    edgeId: string,
+    label?: string
+  ): Promise<{ status: string; message: string }> {
+    return this.fetchWithErrorHandling<{ status: string; message: string }>(
+      `${API_ENDPOINTS.MAPS}/${mapId}/edges/${edgeId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ label }),
+      }
+    );
+  }
+
+  async deleteMapEdge(
+    mapId: string,
+    edgeId: string
+  ): Promise<{ status: string; message: string }> {
+    return this.fetchWithErrorHandling<{ status: string; message: string }>(
+      `${API_ENDPOINTS.MAPS}/${mapId}/edges/${edgeId}`,
+      {
+        method: "DELETE",
       }
     );
   }

@@ -42,17 +42,18 @@ export interface MindMap {
 }
 
 export interface MapNode {
-  id: number;
-  file_path: string;
-  position_x: number;
-  position_y: number;
+  id: string;
+  label: string;
+  type: "file" | "concept";
+  position: { x: number; y: number };
+  file_path?: string;
 }
 
 export interface MapEdge {
-  id: number;
-  source_node_id: number;
-  target_node_id: number;
-  label: string;
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  label?: string;
 }
 
 // API Response Types

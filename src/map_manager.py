@@ -130,6 +130,59 @@ def get_map_data(map_id: int) -> dict:
 
         return {"nodes": nodes, "edges": edges}
 
+def update_node_position(map_id: int, node_id: int, x: int, y: int) -> bool:
+    """Updates the position of a node in a map."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE nodes SET position_x = ?, position_y = ? WHERE id = ? AND map_id = ?",
+            (x, y, node_id, map_id)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
+def delete_node_from_map(map_id: int, node_id: int) -> bool:
+    """Deletes a node from a map and all its associated edges."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        
+        # First delete all edges connected to this node
+        cursor.execute(
+            "DELETE FROM edges WHERE map_id = ? AND (source_node_id = ? OR target_node_id = ?)",
+            (map_id, node_id, node_id)
+        )
+        
+        # Then delete the node
+        cursor.execute(
+            "DELETE FROM nodes WHERE id = ? AND map_id = ?",
+            (node_id, map_id)
+        )
+        
+        conn.commit()
+        return cursor.rowcount > 0
+
+def update_edge_label(map_id: int, edge_id: int, label: str = None) -> bool:
+    """Updates the label of an edge in a map."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE edges SET label = ? WHERE id = ? AND map_id = ?",
+            (label, edge_id, map_id)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
+def delete_edge_from_map(map_id: int, edge_id: int) -> bool:
+    """Deletes an edge from a map."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM edges WHERE id = ? AND map_id = ?",
+            (edge_id, map_id)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
 
 # --- Initialize DB if not present ---
 if not os.path.exists(DB_PATH):

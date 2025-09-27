@@ -10,8 +10,11 @@ COLLECTION_NAME = "context_collection"
 print("Initializing ChromaDB...")
 try:
     CLIENT = chromadb.PersistentClient(path=DB_PATH)    
-    COLLECTION = CLIENT.get_or_create_collection(name=COLLECTION_NAME)
-    print("ChromaDB initialized successfully.")
+    COLLECTION = CLIENT.get_or_create_collection(
+        name=COLLECTION_NAME,
+        metadata={"hnsw:space": "cosine"}  # Use cosine similarity instead of L2
+    )
+    print("ChromaDB initialized successfully with cosine similarity.")
     
 except Exception as e:
     print(f"Error initializing ChromaDB: {e}")
@@ -150,3 +153,67 @@ def get_graph_for_entity(entity_name: str, limit: int = 25) -> dict:
 
     print(f"✅ Graph generated with {len(nodes)} nodes and {len(edges)} edges.")
     return {"nodes": nodes, "edges": edges}
+
+def get_all_graph_data(limit: int = 50) -> dict:
+    """Get all entities and their relationships from the database."""
+    if not COLLECTION:
+        print("Database not initialized.")
+        return {"nodes": [], "edges": []}
+
+    print("\nGenerating graph for all entities...")
+
+    try:
+        # Get all items from the database
+        all_results = COLLECTION.get(
+            include=["metadatas"],
+            limit=limit
+        )
+    except Exception as e:
+        print(f"Error during query: {e}")
+        return {"nodes": [], "edges": []}
+
+    if not all_results or not all_results.get("metadatas"):
+        return {"nodes": [], "edges": []}
+
+    # Collect all unique entities and files
+    entities = set()
+    files = []
+    edges = []
+
+    for metadata in all_results["metadatas"]:
+        file_id = metadata["page_id"]
+        file_label = os.path.basename(file_id)
+        
+        # Ensure tags are returned as a list
+        tags_str = metadata.get('tags', '')
+        if isinstance(tags_str, str) and tags_str:
+            metadata['tags'] = [tag.strip() for tag in tags_str.split(',') if tag.strip()]
+        else:
+            metadata['tags'] = []
+
+        # Add file node
+        files.append({
+            "id": file_id,
+            "label": file_label,
+            "type": "file",
+            "metadata": metadata
+        })
+
+        # Collect all entities from tags
+        for tag in metadata['tags']:
+            if tag.strip():
+                entities.add(tag.strip())
+
+    # Create entity nodes
+    entity_nodes = [{"id": entity, "label": entity, "type": "entity"} for entity in entities]
+
+    # Create edges between entities and files
+    for metadata in all_results["metadatas"]:
+        file_id = metadata["page_id"]
+        for tag in metadata.get('tags', []):
+            if tag.strip():
+                edges.append({"from": tag.strip(), "to": file_id, "label": "mentions"})
+
+    all_nodes = entity_nodes + files
+    print(f"✅ All entities graph generated with {len(all_nodes)} nodes and {len(edges)} edges.")
+    return {"nodes": all_nodes, "edges": edges}
