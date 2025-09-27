@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   PlusIcon,
   CalendarIcon,
@@ -41,6 +42,7 @@ export default function MapsInterface() {
   });
   const [isCreating, setIsCreating] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCreateMap = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,23 +50,33 @@ export default function MapsInterface() {
 
     setIsCreating(true);
     try {
-      // Backend/createMap currently only accepts a name; description is not supported in API mock
-      await createMap(formData.name.trim());
+      // The useMaps hook's createMap should return the newly created map object
+      const newMap = await createMap(formData.name.trim());
       setFormData({ name: "", description: "" });
       setShowCreateModal(false);
+      
+      // On successful creation, navigate to the new map's page
+      if (newMap && newMap.id) {
+        router.push(`/maps/${newMap.id}`);
+      }
     } catch (error) {
       console.error("Failed to create map:", error);
+      // Optionally, show an error toast to the user here
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleDeleteMap = async (mapId: string | number) => {
+    setIsDeleting(true);
     try {
       await deleteMap(Number(mapId));
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Failed to delete map:", error);
+      // Optionally, show an error toast to the user here
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -84,6 +96,8 @@ export default function MapsInterface() {
       return "—";
     }
   };
+
+  const router = useRouter();
 
   if (isLoading) {
     return (
@@ -321,6 +335,7 @@ export default function MapsInterface() {
                   onClick={() =>
                     deleteConfirm && handleDeleteMap(deleteConfirm)
                   }
+                  loading={isDeleting}
                 >
                   Delete Map
                 </Button>

@@ -52,7 +52,7 @@ export default function ResultCard({ result, onContextMenu }: ResultCardProps) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       // Handle card activation (could open file or show details)
-      console.log('Card activated:', result.filename);
+      console.log('Card activated:', filename);
     } else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
       e.preventDefault();
       if (onContextMenu) {
