@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os
-import threading
+import threading 
 from src.database_manager import search, delete_item, get_graph_for_entity
 from src.map_manager import create_map, get_all_maps, get_map_data, add_node_to_map, create_edge
 from run_background_monitor import process_file_if_new, main as start_background_monitor
@@ -103,23 +103,33 @@ def format_search_results(search_results: dict, limit: int) -> List[dict]:
         if i >= limit:
             break
             
-        file_path = metadata['file_path']
-        file_type = determine_file_type(file_path)
+        # Use page_id as the unique identifier for the result item
+        result_id = metadata.get('page_id', metadata['file_path'])
+        # The file_path should always point to the original file
+        original_file_path = metadata['file_path']
         
         # Calculate similarity score (1 - distance, since lower distance = higher similarity)
         similarity = max(0.0, 1.0 - distance)
         
+        # The frontend expects an array for tags. The DB stores it as a comma-separated string.
+        # We need to convert it back to a list.
+        tags_from_db = metadata.get('tags', '')
+        if isinstance(tags_from_db, str) and tags_from_db:
+            tags_for_frontend = [tag.strip() for tag in tags_from_db.split(',')]
+        else:
+            tags_for_frontend = []
+
         result = {
-            "file_path": file_path,
-            "type": file_type,
-            "tags": metadata.get('tags', []),
+            "file_path": result_id,
+            "type": determine_file_type(original_file_path),
+            "tags": tags_for_frontend,
             "user_caption": metadata.get('user_caption', ''),
             "similarity": round(similarity, 2)
         }
         
         # Add PDF-specific information if it's a PDF page
-        if file_type == "pdf" and "_page_" in file_path:
-            pdf_info = extract_pdf_info(file_path)
+        if "_page_" in result_id:
+            pdf_info = extract_pdf_info(result_id)
             result.update(pdf_info)
             result["type"] = "pdf_page"
         
@@ -259,6 +269,12 @@ async def get_entity_graph(name: str = Query(..., description="Entity name to ge
     """
     try:
         graph_data = get_graph_for_entity(name)
+        # Add a null position to nodes from AI-generated graphs for frontend consistency.
+        # The frontend will be responsible for auto-layout.
+        for node in graph_data.get("nodes", []):
+            if "position" not in node:
+                node["position"] = None
+
         return GraphResponse(nodes=graph_data.get("nodes", []), edges=graph_data.get("edges", []))
         
     except Exception as e:
@@ -331,6 +347,35 @@ async def get_map_details(map_id: int):
                     detail=f"Map with ID {map_id} not found"
                 )
         
+        # The frontend expects a nested `position` object. Transform the data.
+        formatted_nodes = []
+        from src.database_manager import COLLECTION
+        for node in map_data.get("nodes", []):
+            # Enrich the node with metadata from ChromaDB
+            metadata = {}
+            if COLLECTION:
+                # Fetch metadata for the file path. We assume the node's file_path is a unique ID in Chroma.
+                # We need to handle both direct file paths and page-specific paths.
+                db_entry = COLLECTION.get(ids=[node["file_path"]], limit=1)
+                if db_entry and db_entry['metadatas']:
+                    metadata = db_entry['metadatas'][0]
+                else:
+                    # If the ID is not in ChromaDB, metadata will be empty
+                    metadata = {}
+            
+            # Ensure tags are always a list, even if metadata is missing.
+            tags_str = metadata.get('tags', '')
+            metadata['tags'] = [tag.strip() for tag in tags_str.split(',') if tag.strip()] if isinstance(tags_str, str) and tags_str else []
+
+            formatted_nodes.append({
+                "id": node["id"],
+                "file_path": node["file_path"],
+                "label": os.path.basename(node["file_path"]),
+                "position": {"x": node["position_x"], "y": node["position_y"]},
+                "metadata": metadata # Add the enriched metadata
+            })
+        map_data["nodes"] = formatted_nodes
+
         return GraphResponse(nodes=map_data["nodes"], edges=map_data["edges"])
         
     except HTTPException:

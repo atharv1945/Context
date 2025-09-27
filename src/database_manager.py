@@ -32,14 +32,14 @@ def add_item(analysis_result: dict):
         return
 
     # --- Normalize tags ---
-    raw_tags = analysis_result.get("tags", "")
+    raw_tags = analysis_result.get("tags", [])
     if isinstance(raw_tags, str):
         # Split by comma and strip whitespace, lowercase for consistency
         tag_list = [t.strip().lower() for t in raw_tags.split(",") if t.strip()]
     elif isinstance(raw_tags, list):
         tag_list = [str(t).strip().lower() for t in raw_tags if str(t).strip()]
     else:
-        tag_list = []
+        tag_list = [] # Default to empty list if format is unexpected
 
     # ChromaDB metadata values must be primitive types. Convert the list of tags to a single string.
     tags_as_string = ", ".join(tag_list)
@@ -132,6 +132,13 @@ def get_graph_for_entity(entity_name: str, limit: int = 25) -> dict:
     for metadata in filtered_metadatas:
         file_id = metadata["page_id"] # Use the unique page_id for graph nodes
         file_label = os.path.basename(file_id)
+
+        # Ensure tags are returned as a list, consistent with the /search endpoint.
+        tags_str = metadata.get('tags', '')
+        if isinstance(tags_str, str) and tags_str:
+            metadata['tags'] = [tag.strip() for tag in tags_str.split(',') if tag.strip()]
+        else:
+            metadata['tags'] = []
 
         nodes.append({
             "id": file_id,
